@@ -1,9 +1,5 @@
-### Update blog title
-POST http://localhost:3000/reset-password
-Content-Type: application/json
+### 1. Upload profile image (chỉ test URL gửi lên DB)
 
-{
-  "token": "6uQk2Zsvx3nOxqBV7sbBAD46sV_LkrQl",
-  "newPassword": "Admin@123"
-}
+GET http://localhost:3000/get-all-users
+Content-Type: application/json
 

@@ -1,13 +1,13 @@
-import { AnimationWrapper } from '../libs/gsapAnimation';
-import { uploadImage } from '../libs/cloudinary';
-import blog_banner from '../img/blog_banner.png';
-import { AppContext } from '../models/ContextModel';
-import EditorJS from '@editorjs/editorjs';
-import { editorTools } from '../libs/editorTools';
-import type { OutputData } from '@editorjs/editorjs';
-import { Tag } from '../components/tag';
-import toast from '../libs/toast';
-import { BlogService } from '../services/BlogService';
+import { AnimationWrapper } from "../libs/gsapAnimation";
+import { uploadImage } from "../libs/cloudinary";
+import blog_banner from "../img/blog_banner.png";
+import { AppContext } from "../models/ContextModel";
+import EditorJS from "@editorjs/editorjs";
+import { editorTools } from "../libs/editorTools";
+import type { OutputData } from "@editorjs/editorjs";
+import { Tag } from "../components/tag";
+import toast from "../libs/toast";
+import { BlogService } from "../services/BlogService";
 
 declare global {
   interface Window {
@@ -19,16 +19,14 @@ declare global {
     handleDesChange?: (event: Event) => void;
     handleTagKeyDown?: (event: KeyboardEvent) => void;
     handleTagDelete?: (index: number) => void;
-    
   }
 }
 
-
 export class EditorView {
   private editor?: EditorJS;
-  private editorState: 'editor' | 'publish' = 'editor';
+  private editorState: "editor" | "publish" = "editor";
 
-  public setEditorState(state: 'editor' | 'publish') {
+  public setEditorState(state: "editor" | "publish") {
     this.editorState = state;
   }
 
@@ -39,11 +37,16 @@ export class EditorView {
     this.assignHandler("handlePublish", this.handlePublish);
     this.assignHandler("handleCloseEvent", this.handleCloseEvent);
     this.assignHandler("handleDesChange", this.handleDesChange);
-    this.assignHandler("handleTagKeyDown", this.handleTagKeyDown as unknown as (event: Event) => void);
-    
+    this.assignHandler(
+      "handleTagKeyDown",
+      this.handleTagKeyDown as unknown as (event: Event) => void
+    );
   }
 
-  private assignHandler(name: keyof Window, handler: (event: Event) => void): void {
+  private assignHandler(
+    name: keyof Window,
+    handler: (event: Event) => void
+  ): void {
     if (!window[name]) {
       (window[name] as typeof handler) = handler.bind(this);
     }
@@ -51,12 +54,12 @@ export class EditorView {
 
   private handleTagKeyDown(event: KeyboardEvent) {
     const input = event.target as HTMLInputElement;
-    if (event.key === 'Enter') {
+    if (event.key === "Enter") {
       event.preventDefault();
       const newTag = input.value.trim();
 
       if (!AppContext.blog.tags) {
-        AppContext.setBlogField('tags', []);
+        AppContext.setBlogField("tags", []);
       }
 
       if (AppContext.blog.tags.includes(newTag)) {
@@ -71,52 +74,50 @@ export class EditorView {
 
       if (newTag) {
         const newTags = [...(AppContext.blog.tags || []), newTag];
-        AppContext.setBlogField('tags', newTags);
-        input.value = '';
+        AppContext.setBlogField("tags", newTags);
+        input.value = "";
         this.updateTagList();
       }
-
     }
   }
 
-
   private bindTagDeleteEvents() {
-    const tagContainer = document.querySelector('.tag-container');
+    const tagContainer = document.querySelector(".tag-container");
     if (!tagContainer) return;
 
     tagContainer.replaceWith(tagContainer.cloneNode(true));
-    
-    const newTagContainer = document.querySelector('.tag-container');
+
+    const newTagContainer = document.querySelector(".tag-container");
     if (!newTagContainer) return;
 
-    newTagContainer.addEventListener('click', (e) => {
+    newTagContainer.addEventListener("click", (e) => {
       const target = e.target as HTMLElement;
-      if (target.classList.contains('tag-delete-btn')) {
-        const tagElements = Array.from(newTagContainer.querySelectorAll('.tag-item'));
-        const tagItem = target.closest('.tag-item');
+      if (target.classList.contains("tag-delete-btn")) {
+        const tagElements = Array.from(
+          newTagContainer.querySelectorAll(".tag-item")
+        );
+        const tagItem = target.closest(".tag-item");
         if (!tagItem) return;
         const index = tagElements.indexOf(tagItem as Element);
         if (index >= 0) {
           const newTags = [...AppContext.blog.tags];
           newTags.splice(index, 1);
-          AppContext.setBlogField('tags', newTags);
+          AppContext.setBlogField("tags", newTags);
           this.updateTagList();
-
         }
-        console.log('tagElements:', tagElements);
-        console.log('tagItem:', tagItem);
-        console.log('index:', index);
+        console.log("tagElements:", tagElements);
+        console.log("tagItem:", tagItem);
+        console.log("index:", index);
       }
-
-
     });
   }
 
-
   public updateTagList() {
-    const tagContainer = document.querySelector('.tag-container');
+    const tagContainer = document.querySelector(".tag-container");
     if (tagContainer) {
-      tagContainer.innerHTML = AppContext.blog.tags.map(tag => Tag(tag)).join('');
+      tagContainer.innerHTML = AppContext.blog.tags
+        .map((tag) => Tag(tag))
+        .join("");
       this.bindTagDeleteEvents();
     }
     const tagCounter = document.getElementById("tagCounter");
@@ -125,11 +126,10 @@ export class EditorView {
     }
   }
 
-
   public initEditor() {
     if (this.editor) return;
-    
-    const holderElement = document.getElementById('textEditor');
+
+    const holderElement = document.getElementById("textEditor");
     if (!holderElement) {
       console.warn("Holder element #textEditor not found. Waiting for DOM...");
       return;
@@ -137,31 +137,35 @@ export class EditorView {
 
     let dataToLoad: OutputData = {
       time: Date.now(),
-      blocks: []
+      blocks: [],
     };
 
-    const content = AppContext.blog.content;
+    const contentRaw = AppContext.blog.content;
+
+    // Xử lý nếu content bị trả về là mảng
+    const contentObj: OutputData | null = Array.isArray(contentRaw)
+      ? (contentRaw[0] as OutputData)
+      : (contentRaw as OutputData);
 
     if (
-      content &&
-      typeof content === 'object' &&
-      'blocks' in content &&
-      Array.isArray((content as any).blocks)
+      contentObj &&
+      typeof contentObj === "object" &&
+      Array.isArray(contentObj.blocks)
     ) {
-      dataToLoad = content as unknown as OutputData;
+      dataToLoad = contentObj;
     }
 
     this.editor = new EditorJS({
-      holder: 'textEditor',
+      holder: "textEditor",
       data: dataToLoad,
       tools: editorTools,
       placeholder: "Let's write awesome story",
       onChange: async () => {
         const savedData = await this.editor?.save();
         if (savedData) {
-          AppContext.setBlogField('content', savedData);
+          AppContext.setBlogField("content", savedData);
         }
-      }
+      },
     });
   }
 
@@ -190,10 +194,10 @@ export class EditorView {
         return;
       }
 
-      AppContext.setBlogField('content', data);
+      AppContext.setBlogField("content", data);
       toast.success("Blog saved! Ready to publish.");
-      this.editorState = 'publish';
-      window.location.hash = '/publish';
+      this.editorState = "publish";
+      window.location.hash = "/publish";
     } catch (error) {
       console.error("Failed to save blog content:", error);
       toast.error("An error occurred while saving blog content.");
@@ -201,31 +205,30 @@ export class EditorView {
   }
 
   private async handleCloseEvent() {
-    this.editorState = 'editor';
-    window.location.hash = '/editor';
-
+    this.editorState = "editor";
+    window.location.hash = "/editor";
   }
 
   private async handleTitleChange(event: Event) {
     const input = event.target as HTMLTextAreaElement | HTMLInputElement;
-    input.style.height = 'auto';
-    input.style.height = input.scrollHeight + 'px';
+    input.style.height = "auto";
+    input.style.height = input.scrollHeight + "px";
 
-    AppContext.setBlogField('title', input.value);
+    AppContext.setBlogField("title", input.value);
     this.updateTitleName();
   }
 
   private async handleDesChange(event: Event) {
     const input = event.target as HTMLTextAreaElement | HTMLInputElement;
 
-    AppContext.setBlogField('des', input.value);
+    AppContext.setBlogField("des", input.value);
     this.updateDescription();
   }
 
   private updateDescription() {
     const des = document.getElementById("des");
     const desValid = document.getElementById("desValidate");
-    const desText = AppContext.blog.des?.trim() || '';
+    const desText = AppContext.blog.des?.trim() || "";
 
     if (des) {
       des.textContent = desText;
@@ -236,11 +239,10 @@ export class EditorView {
     }
   }
 
-
   private updateTitleName() {
     const titleName = document.getElementById("titleName");
     if (titleName) {
-      titleName.textContent = AppContext.blog.title.trim() || 'New blog';
+      titleName.textContent = AppContext.blog.title.trim() || "New blog";
     }
   }
   private async handleTitleKeyDown(event: Event) {
@@ -259,10 +261,12 @@ export class EditorView {
       toast.dismissLoading();
 
       if (uploadedUrl) {
-        const bannerImage = document.getElementById("bannerImg") as HTMLImageElement | null;
+        const bannerImage = document.getElementById(
+          "bannerImg"
+        ) as HTMLImageElement | null;
         if (bannerImage) bannerImage.src = uploadedUrl;
 
-        AppContext.setBlogField('banner', uploadedUrl);
+        AppContext.setBlogField("banner", uploadedUrl);
         toast.success("Banner uploaded successfully!");
       } else {
         toast.error("Failed to upload banner image.");
@@ -279,26 +283,39 @@ export class EditorView {
     const isLoggedIn = !!AppContext.user.accessToken;
 
     if (!isLoggedIn) {
-      toast.error('You must be logged in to write a blog');
-      window.location.hash = '/login';
-      return '';
+      toast.error("You must be logged in to write a blog");
+      window.location.hash = "/login";
+      return "";
     }
 
     const editorState = this.editorState;
 
     const navHtml = this.renderNavbar();
-    let contentHtml = '';
+    let contentHtml = "";
 
-    if (editorState === 'editor') {
+    if (editorState === "editor") {
       contentHtml = this.renderBlogEditor();
-    } else if (editorState === 'publish') {
+    } else if (editorState === "publish") {
       contentHtml = this.renderPublishForm();
-      return AnimationWrapper({ children: contentHtml, fromY: 30, toY: 0, duration: 0.5 });
+      return AnimationWrapper({
+        children: contentHtml,
+        fromY: 30,
+        toY: 0,
+        duration: 0.5,
+      });
     } else {
       contentHtml = this.renderBlogEditor();
     }
 
-    return navHtml + AnimationWrapper({ children: contentHtml, fromY: 30, toY: 0, duration: 0.5 });
+    return (
+      navHtml +
+      AnimationWrapper({
+        children: contentHtml,
+        fromY: 30,
+        toY: 0,
+        duration: 0.5,
+      })
+    );
   }
 
   public renderNavbar(): string {
@@ -309,13 +326,13 @@ export class EditorView {
             Vietnews
           </a>
           <p id="titleName" class="max-md:hidden line-clamp-1 text-center w-full">
-            ${AppContext.blog.title || 'New blog'}
+            ${AppContext.blog.title || "New blog"}
           </p>
         </div>
 
         <div class="flex gap-4 ml-auto">
-          <button class="btn-dark !py-2" onclick="handlePublish()">Publish</button>
-          <button id="btn-draft" class="btn-light !py-2">Save Draft</button>
+          <button class="btn-dark" onclick="handlePublish()">Publish</button>
+          <button id="btn-draft" class="btn-light">Save Draft</button>
         </div>
       </nav>
     `;
@@ -350,7 +367,7 @@ export class EditorView {
             class="!text-3xl font-medium w-full h-20 outline-none rezise-none !mt-10 leading-tight placeholder:opacity-60"
             onKeyDown="handleTitleKeyDown(event)"
             oninput="handleTitleChange(event)"
-          >${blog.title || ''}</textarea>
+          >${blog.title || ""}</textarea>
 
           <hr class="w-full opacity-10 my-5" />
           <div id="textEditor" class="font-gelasio"></div>
@@ -365,20 +382,54 @@ export class EditorView {
     const draftBtn = document.querySelector("#btn-draft");
 
     if (publishBtn) {
-      publishBtn.addEventListener("click", (e) => {
-        console.log(AppContext.user);
-        
+      publishBtn.addEventListener("click", async (e) => {
         e.preventDefault();
+
         const blogData = AppContext.blog;
-        blogService.saveOrPublish(blogData, false);
+
+        try {
+          blogData.draft = false;
+
+          if (blogData.blog_id) {
+            const result = await blogService.updateBlog(
+              blogData.blog_id,
+              blogData
+            );
+            if (result.success) {
+              toast.success("Blog đã được cập nhật thành công!");
+              AppContext.resetBlog();
+              window.location.href = "/";
+            } else {
+              toast.error("error: " + result.error);
+            }
+          } else {
+            const result = await blogService.saveOrPublish(blogData, false);
+            if (result.success) {
+              AppContext.resetBlog();
+              window.location.href = "/";
+            } else {
+              toast.error("error: " + result.error);
+            }
+          }
+        } catch (err) {
+          console.error("Lỗi khi publish:", err);
+          toast.error("Đã xảy ra lỗi khi publish blog.");
+        }
       });
     }
 
     if (draftBtn) {
-      draftBtn.addEventListener("click", (e) => {
+      draftBtn.addEventListener("click", async (e) => {
         e.preventDefault();
         const blogData = AppContext.blog;
-        blogService.saveOrPublish(blogData, true);
+
+        try {
+          await blogService.saveOrPublish(blogData, true); // lưu bản nháp
+          alert("Đã lưu bản nháp!");
+        } catch (err) {
+          console.error("Lỗi khi lưu bản nháp:", err);
+          alert("Không thể lưu bản nháp.");
+        }
       });
     }
   }
@@ -386,7 +437,7 @@ export class EditorView {
   public renderPublishForm(): string {
     const blog = AppContext.blog;
     console.log(blog);
-    
+
     if (!blog.title || !blog.banner || !blog.content) {
       return `
         <section class="max-w-xl mx-auto text-center py-20">
@@ -425,7 +476,7 @@ export class EditorView {
             type="text" 
             placeholder="Blog Title" 
             class="input-box !pl-4" 
-            value="${blog.title || ''}" 
+            value="${blog.title || ""}" 
             oninput="handleTitleChange(event)" 
           />
 
@@ -435,17 +486,23 @@ export class EditorView {
             maxLength="200"
             class="h-40 resize-none leading-7 input-box !pl-4"
             onInput="handleDesChange(event)"
-          >${blog.des || ''}</textarea>
+          >${blog.des || ""}</textarea>
 
-          <p id="desValidate" class="!mt-1 text-gray-600 text-sm text-right">${200 - (blog.des?.length || 0)} characters left</p>
+          <p id="desValidate" class="!mt-1 text-gray-600 text-sm text-right">${
+            200 - (blog.des?.length || 0)
+          } characters left</p>
 
           <div class="relative input-box !pl-2 !py !pb-4 !mt-9">
             <input type="text" placeholder="Tag" class="sticky input-box !bg-white top-0 left-0 !pl-4 !mb-3 !focus:bg-white" onKeyDown="handleTagKeyDown(event)" />
             <div class="tag-container">
-              ${(AppContext.blog.tags || []).map((tag: string) => Tag(tag)).join('')}
+              ${(AppContext.blog.tags || [])
+                .map((tag: string) => Tag(tag))
+                .join("")}
             </div>
           </div>
-          <p id="tagCounter" class="!mt-1 text-gray-600 text-sm text-right" >${10 - AppContext.blog.tags.length} tags left</p>
+          <p id="tagCounter" class="!mt-1 text-gray-600 text-sm text-right" >${
+            10 - AppContext.blog.tags.length
+          } tags left</p>
 
           <button id="btn-publish" class="btn-dark !px-8">
             Publish
@@ -455,5 +512,4 @@ export class EditorView {
       </section>
     `;
   }
-
 }

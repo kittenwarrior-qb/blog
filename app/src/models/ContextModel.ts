@@ -1,29 +1,35 @@
-import { SessionModel } from './SessionModel';
+import { SessionModel } from "./SessionModel";
 
-type UserContext = {
+export type UserContext = {
   accessToken: string | null;
   profileImg: string | null;
   username: string | null;
 };
 
 type BlogContext = {
+  blog_id?: string;
   title: string;
   banner: string;
   content: {
+    time?: number;
     blocks: any[];
+    version?: string;
   };
   tags: string[];
   des: string;
   author: { personal_info: any };
+  draft: boolean;
 };
 
 const defaultBlog: BlogContext = {
-  title: '',
-  banner: '',
+  blog_id: "",
+  title: "",
+  banner: "",
   content: { blocks: [] },
   tags: [],
-  des: '',
+  des: "",
   author: { personal_info: {} },
+  draft: true,
 };
 
 export class ContextModel {
@@ -37,7 +43,7 @@ export class ContextModel {
 
   private loadUser(): UserContext {
     try {
-      const data = SessionModel.get('user');
+      const data = SessionModel.get("user");
       const user = data ? JSON.parse(data) : {};
       return {
         accessToken: user.accessToken || null,
@@ -52,6 +58,9 @@ export class ContextModel {
   setAccessToken(token: string | null) {
     this.user.accessToken = token;
     this.updateStoredUser({ accessToken: token });
+
+    const storedUser = this.loadUser();
+    this.user = storedUser;
   }
 
   setProfileImg(url: string | null) {
@@ -76,25 +85,34 @@ export class ContextModel {
       }
     });
 
+    this.user = updated;
+
     if (Object.keys(updated).length > 0) {
-      SessionModel.store('user', updated);
+      SessionModel.store("user", updated);
     } else {
-      SessionModel.remove('user');
+      SessionModel.remove("user");
     }
   }
 
-
   private loadBlog(): BlogContext {
     try {
-      const data = SessionModel.get('blog');
+      const data = SessionModel.get("blog");
       return data ? JSON.parse(data) : { ...defaultBlog };
     } catch {
       return { ...defaultBlog };
     }
   }
-
-  setBlogField(field: keyof BlogContext, value: any) {
+  setBlogField<K extends keyof BlogContext>(field: K, value: BlogContext[K]) {
     this.blog[field] = value;
+    this.updateStoredBlog();
+  }
+
+  setBlog(data: BlogContext) {
+    if (Array.isArray(data.content)) {
+      data.content = data.content[0];
+    }
+
+    this.blog = data;
     this.updateStoredBlog();
   }
 
@@ -105,9 +123,9 @@ export class ContextModel {
 
   private updateStoredBlog() {
     try {
-      SessionModel.store('blog', this.blog);
+      SessionModel.store("blog", this.blog);
     } catch (err) {
-      console.error('Failed to store blog:', err);
+      console.error("Failed to store blog:", err);
     }
   }
 }

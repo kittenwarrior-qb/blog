@@ -11,7 +11,7 @@ export const userNavigation = () => {
             </div>
         </a>
 
-        <a href="#/user/${AppContext.user.username}">
+        <a href="#/profile/${AppContext.user.username}">
             <div class="link !pl-8 !py-4">Profile</div>
         </a>
 
@@ -30,7 +30,10 @@ export const userNavigation = () => {
         </button>
     </div>
   `;
-  return AnimationWrapper({ children: formHTML, fromY: 0, toY: 0, duration: 0.2 });
+  return AnimationWrapper({
+    children: formHTML,
+    fromY: 0,
+    toY: 0,
+    duration: 0.2,
+  });
 };
-
-

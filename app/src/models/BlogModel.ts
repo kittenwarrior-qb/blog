@@ -6,9 +6,10 @@ export type Content = {
 };
 
 export type BlogParams = {
+  _id?: string;
   blog_id?: string;
-  title: string;
-  des: string;
+  title?: string;
+  des?: string;
   banner?: string;
   activity?: any;
   tags?: string[];
@@ -19,6 +20,7 @@ export type BlogParams = {
 };
 
 export class BlogModel {
+  _id?: string;
   blog_id?: string;
   title?: string;
   des?: string;

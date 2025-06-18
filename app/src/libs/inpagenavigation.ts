@@ -6,8 +6,8 @@ type TabItem = {
 export const InPageNavigation = (tabs: TabItem[], id: string): string => {
   const buttonsHtml = tabs
     .map((tab, i) => {
-      const visibilityClass = tab.hiddenOnDesktop ? 'block md:hidden' : 'block';
-      const textClass = i === 0 ? 'text-black' : 'text-gray-400';
+      const visibilityClass = tab.hiddenOnDesktop ? "block md:hidden" : "block";
+      const textClass = i === 0 ? "text-black" : "text-gray-400";
 
       return `
         <button 
@@ -18,7 +18,7 @@ export const InPageNavigation = (tabs: TabItem[], id: string): string => {
         </button>
       `;
     })
-    .join('');
+    .join("");
 
   const activeLineHtml = `
     <div id="active-line-${id}" class="absolute bottom-0 h-[2px] w-[80px] bg-black transition-all duration-300"></div>
@@ -36,13 +36,15 @@ export const initInPageNavigation = (id: string): void => {
   const container = document.getElementById(id);
   if (!container) return;
 
-  const buttons = container.querySelectorAll<HTMLButtonElement>(`.nav-tab-${id}`);
+  const buttons = container.querySelectorAll<HTMLButtonElement>(
+    `.nav-tab-${id}`
+  );
   const activeLine = document.getElementById(`active-line-${id}`);
   const contentContainer = document.getElementById(`${id}-contents`);
   if (!activeLine || buttons.length === 0 || !contentContainer) return;
 
   // Hàm chuẩn hóa label thành id-friendly
-  const toId = (label: string) => label.toLowerCase().replace(/\s+/g, '-');
+  const toId = (label: string) => label.toLowerCase().replace(/\s+/g, "-");
 
   const updateActiveLine = (btn: HTMLButtonElement) => {
     const btnRect = btn.getBoundingClientRect();
@@ -55,20 +57,21 @@ export const initInPageNavigation = (id: string): void => {
 
   // Hàm kích hoạt content theo id
   const activateTab = (contentId: string) => {
-    const allContents = contentContainer.querySelectorAll<HTMLElement>('.tab-content');
-    allContents.forEach(item => {
+    const allContents =
+      contentContainer.querySelectorAll<HTMLElement>(".tab-content");
+    allContents.forEach((item) => {
       if (item.id === contentId) {
-        item.classList.remove('hidden');
-        item.classList.add('block');
+        item.classList.remove("hidden");
+        item.classList.add("block");
       } else {
-        item.classList.remove('block');
-        item.classList.add('hidden');
+        item.classList.remove("block");
+        item.classList.add("hidden");
       }
     });
   };
 
   const setActiveButton = (btn: HTMLButtonElement) => {
-    buttons.forEach(b => {
+    buttons.forEach((b) => {
       b.classList.remove("text-black");
       b.classList.add("text-gray-400");
     });
@@ -84,18 +87,18 @@ export const initInPageNavigation = (id: string): void => {
       setActiveButton(btn);
 
       // Lấy label từ data-label hoặc textContent
-      const label = btn.dataset.label || btn.textContent || '';
+      const label = btn.dataset.label || btn.textContent || "";
       const contentId = `content-${toId(label.trim())}`;
 
       activateTab(contentId);
     });
   });
 
-  // Mặc định active tab đầu tiên khi load trang
-  window.addEventListener("load", () => {
+  // Mặc định active tab đầu tiên khi DOM đã render xong
+  requestAnimationFrame(() => {
     setActiveButton(buttons[0]);
 
-    const label = buttons[0].dataset.label || buttons[0].textContent || '';
+    const label = buttons[0].dataset.label || buttons[0].textContent || "";
     activateTab(`content-${toId(label.trim())}`);
   });
 
@@ -104,11 +107,8 @@ export const initInPageNavigation = (id: string): void => {
     if (window.innerWidth >= 768) {
       setActiveButton(buttons[0]);
 
-      const label = buttons[0].dataset.label || buttons[0].textContent || '';
+      const label = buttons[0].dataset.label || buttons[0].textContent || "";
       activateTab(`content-${toId(label.trim())}`);
     }
   });
 };
-
-
-

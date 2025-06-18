@@ -3,6 +3,9 @@ import { HomeController } from "./controllers/HomeController";
 import { AuthController } from "./controllers/AuthController";
 import { EditorController } from "./controllers/EditorController";
 import { AdminController } from "./controllers/AdminController";
+import { AppContext } from "./models/ContextModel";
+import { BlogInteraction } from "./components/blogInteraction";
+import { AdminView } from "./views/AdminView";
 
 // Type params hỗ trợ cả query
 type RouteParams = Record<string, string> & { query?: URLSearchParams };
@@ -69,6 +72,19 @@ const routes: {
     },
   },
   {
+    pattern: /^\/editor\/(?<id>[a-zA-Z0-9\-]+)$/,
+    render: (params) => {
+      if (!params?.id) return Promise.resolve(`<h1>Blog ID not found</h1>`);
+      return editorController.EditorPage(params.id);
+    },
+    layout: layouts.noNavLayout,
+    afterRender: (params) => {
+      if (!params?.id) return;
+      editorController.initEditor();
+    },
+  },
+
+  {
     pattern: /^\/publish$/,
     render: () => editorController.PublishPage(),
     layout: layouts.noNavLayout,
@@ -83,17 +99,66 @@ const routes: {
       return homeController.BlogDetailPage(params.id);
     },
     layout: layouts.mainLayout,
+    afterRender: () => {
+      const blog = homeController.currentBlog;
+      if (!blog) return;
+
+      requestAnimationFrame(() => {
+        BlogInteraction.init("blog-interaction", blog, AppContext.user);
+      });
+    },
   },
   {
-    pattern: /^\/admin$/,
+    pattern: /^\/profile\/(?<name>[^\/?#]+)$/,
+    render: (params) => {
+      if (!params || !params.name) {
+        return Promise.resolve(`not found user name`);
+      }
+      return homeController.ProfilePage(params.name);
+    },
+    layout: layouts.mainLayout,
+  },
+  {
+    pattern: /^\/edit-profile\/(?<name>[^\/?#]+)$/,
+    render: (params) => {
+      if (!params || !params.name) {
+        return Promise.resolve(`not found user name`);
+      }
+      return homeController.EditProfilePage(params.name);
+    },
+    layout: layouts.mainLayout,
+  },
+  {
+    pattern: /^\/admin\/dashboard$/,
     render: () => adminController.AdminPage(),
     layout: layouts.adminLayout,
+    afterRender: () => {
+      adminController.initLogoutBtn();
+    },
   },
   {
     pattern: /^\/admin\/blogs$/,
     render: () => adminController.AdminBlogPage(),
     layout: layouts.adminLayout,
-    // afterRender: () => adminController.
+    afterRender: () => {
+      adminController.initAdminBlogPage();
+      adminController.initEditBlogEvents();
+      adminController.paginationEvent();
+    },
+  },
+  {
+    pattern: /^\/admin\/blogs\/(?<id>[a-zA-Z0-9\-]+)$/,
+    render: (params?: RouteParams) => {
+      const blogId = params?.["id"];
+      if (!blogId) {
+        return Promise.resolve(`<h1>Blog not found</h1>`);
+      }
+      return adminController.EditBlogPage(blogId);
+    },
+    layout: layouts.adminLayout,
+    afterRender: () => {
+      adminController.initEditBlogEvents();
+    },
   },
 ];
 
@@ -135,7 +200,6 @@ export const router = async () => {
 
   app.innerHTML = layouts.mainLayout(`<h1>404 - Page Not Found</h1>`);
 };
-
 
 window.addEventListener("DOMContentLoaded", router);
 window.addEventListener("hashchange", router);

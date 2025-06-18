@@ -2,7 +2,7 @@ import { AppContext } from "../models/ContextModel";
 import { userNavigation } from "./userdropdown";
 import { SessionModel } from "../models/SessionModel";
 import toast from "../libs/toast";
-
+import axios from "axios";
 
 export class Navbar {
   // Render navbar HTML (string)
@@ -46,15 +46,17 @@ export class Navbar {
 
             <div class="relative">
               <button id="profileToggleBtn" class="w-10 h-10 mt-1">
-                <img class="w-full h-full object-cover rounded-full" src="${AppContext.user.profileImg}" />
+                <img class="w-full h-full object-cover rounded-full" src="${
+                  AppContext.user.profileImg
+                }" />
               </button>
 
               ${userNavigation()}
             </div>
             `
               : `
-            <a href="#/login" class="btn-dark !py-2">Sign In</a>
-            <a href="#/register" class="btn-light !py-2">Sign Up</a>
+            <a href="#/login" class="btn-dark">Sign In</a>
+            <a href="#/register" class="btn-light">Sign Up</a>
             `
           }
         </div>
@@ -69,58 +71,75 @@ export class Navbar {
 
   // Cập nhật hiển thị search box
   private updateSearchBoxVisibility() {
-    const searchBox = document.querySelector('[data-search-box]') as HTMLElement | null;
+    const searchBox = document.querySelector(
+      "[data-search-box]"
+    ) as HTMLElement | null;
     if (!searchBox) return;
 
     if (this.isMobile()) {
-      searchBox.classList.add('hide');
-      searchBox.classList.remove('show');
+      searchBox.classList.add("hide");
+      searchBox.classList.remove("show");
     } else {
-      searchBox.classList.add('show');
-      searchBox.classList.remove('hide');
+      searchBox.classList.add("show");
+      searchBox.classList.remove("hide");
     }
   }
 
-    private updateEditorBtnVisibility() {
-    const editorBtn = document.getElementById('editorBtn') as HTMLDivElement | null;
+  private updateEditorBtnVisibility() {
+    const editorBtn = document.getElementById(
+      "editorBtn"
+    ) as HTMLDivElement | null;
     if (!editorBtn) return;
 
-    editorBtn.style.display = this.isMobile() ? 'none' : 'block';
+    editorBtn.style.display = this.isMobile() ? "none" : "block";
   }
 
-    public initLogoutBtn() {
-    const logoutBtn = document.querySelector('#logoutBtn') as HTMLButtonElement | null;
+  public initLogoutBtn() {
+    const logoutBtn = document.querySelector(
+      "#logoutBtn"
+    ) as HTMLButtonElement | null;
     if (!logoutBtn) return;
 
-    logoutBtn.addEventListener('click', () => {
-      SessionModel.remove("user");
-      AppContext.setAccessToken(null);
-      AppContext.setProfileImg(null);
-      AppContext.setUsername(null);
-      toast.success("Logout successful!");
-      window.location.hash = "#/login";
+    logoutBtn.addEventListener("click", async () => {
+      try {
+        const res = await axios.delete(
+          import.meta.env.VITE_SERVER_DOMAIN + "/logout"
+        );
+
+        SessionModel.remove("user");
+        AppContext.setAccessToken(null);
+        AppContext.setProfileImg(null);
+        AppContext.setUsername(null);
+
+        toast.success(res.data.msg || "Logout successful!");
+      } catch (err: any) {
+        toast.error(err.response?.data?.msg || "Logout failed!");
+      } finally {
+        window.location.hash = "#/login";
+      }
     });
   }
 
   // Khởi tạo sự kiện navbar
   public init() {
-
-    const toggleBtn = document.getElementById('toggleSearchBtn');
-    const profileToggleBtn = document.getElementById('profileToggleBtn');
-    const userDropdown = document.getElementById('userDropdown');
-    const searchBox = document.querySelector('[data-search-box]') as HTMLElement | null;
+    const toggleBtn = document.getElementById("toggleSearchBtn");
+    const profileToggleBtn = document.getElementById("profileToggleBtn");
+    const userDropdown = document.getElementById("userDropdown");
+    const searchBox = document.querySelector(
+      "[data-search-box]"
+    ) as HTMLElement | null;
 
     if (toggleBtn && searchBox) {
-      toggleBtn.addEventListener('click', (e) => {
+      toggleBtn.addEventListener("click", (e) => {
         e.preventDefault();
         if (!this.isMobile()) return;
 
-        if (searchBox.classList.contains('hide')) {
-          searchBox.classList.remove('hide');
-          searchBox.classList.add('show');
+        if (searchBox.classList.contains("hide")) {
+          searchBox.classList.remove("hide");
+          searchBox.classList.add("show");
         } else {
-          searchBox.classList.remove('show');
-          searchBox.classList.add('hide');
+          searchBox.classList.remove("show");
+          searchBox.classList.add("hide");
         }
       });
     }
@@ -128,27 +147,27 @@ export class Navbar {
     this.updateSearchBoxVisibility();
     this.updateEditorBtnVisibility();
 
-    window.addEventListener('resize', () => {
+    window.addEventListener("resize", () => {
       this.updateSearchBoxVisibility();
       this.updateEditorBtnVisibility();
     });
 
     if (profileToggleBtn && userDropdown) {
-      profileToggleBtn.addEventListener('click', (e) => {
+      profileToggleBtn.addEventListener("click", (e) => {
         e.stopPropagation();
-        userDropdown.classList.toggle('hidden');
+        userDropdown.classList.toggle("hidden");
       });
 
-      document.addEventListener('click', (e) => {
+      document.addEventListener("click", (e) => {
         if (
           !userDropdown.contains(e.target as Node) &&
           !profileToggleBtn.contains(e.target as Node)
         ) {
-          userDropdown.classList.add('hidden');
+          userDropdown.classList.add("hidden");
         }
       });
     }
 
-    this.initLogoutBtn()
+    this.initLogoutBtn();
   }
 }

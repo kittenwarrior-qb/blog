@@ -1,6 +1,12 @@
-import { type ContentBlock, renderContentBlock  } from "../components/blogblockcontent";
+import {
+  type ContentBlock,
+  renderContentBlock,
+} from "../components/blogblockcontent";
 import { BlogModel } from "../models/BlogModel";
-import { InPageNavigation, initInPageNavigation } from "../libs/inpagenavigation";
+import {
+  InPageNavigation,
+  initInPageNavigation,
+} from "../libs/inpagenavigation";
 import { AnimationWrapper } from "../libs/gsapAnimation";
 import { BlogCard } from "../components/blogcard";
 import { MinimalBlogCard } from "../components/minimalblogcard";
@@ -8,17 +14,28 @@ import { nodatamessage } from "../components/nodatamessage";
 import { BlogService } from "../services/BlogService";
 
 export class HomeView {
-  public async render(data: { latestBlogs: BlogModel[]; trendingBlogs: BlogModel[] }): Promise<string> {
+  public async render(data: {
+    latestBlogs: BlogModel[];
+    trendingBlogs: BlogModel[];
+  }): Promise<string> {
     const tabs = [
       { label: "Home" },
       { label: "Trending Blogs", hiddenOnDesktop: true },
     ];
-    const categories = ["travel", "celebrities", "cooking", "programming", "phim", "game"];
+    const categories = [
+      "travel",
+      "celebrities",
+      "cooking",
+      "programming",
+      "phim",
+      "game",
+    ];
 
     const renderLatestBlogs =
       data.latestBlogs.length > 0
         ? data.latestBlogs
-            .map((blog, i) => `
+            .map(
+              (blog, i) => `
               <div class="animate-item">
                 ${BlogCard({
                   content: {
@@ -40,13 +57,15 @@ export class HomeView {
                   index: i,
                 })}
               </div>
-            `)
+            `
+            )
             .join("")
         : nodatamessage(`No blogs found in latest blogs`);
 
     const renderMinimalBlogs = (blogs: BlogModel[]) =>
       blogs
-        .map((blog, i) => `
+        .map(
+          (blog, i) => `
           <div class="animate-item">
             ${MinimalBlogCard({
               content: {
@@ -62,13 +81,14 @@ export class HomeView {
               index: i,
             })}
           </div>
-        `)
+        `
+        )
         .join("");
 
     const renderTrendingBlogsTab =
       data.trendingBlogs.length > 0
         ? renderMinimalBlogs(data.trendingBlogs)
-        :  nodatamessage(`No blogs found in trending blogs`);
+        : nodatamessage(`No blogs found in trending blogs`);
 
     const renderTrendingBlogsSidebar =
       data.trendingBlogs.length > 0
@@ -97,7 +117,10 @@ export class HomeView {
               <h1 class="font-medium text-xl !mb-8">Stories from all interests</h1>
               <div class="flex gap-3 flex-wrap !mb-8">
                 ${categories
-                  .map((category, i) => `<button class="tag" key="${i}">${category}</button>`)
+                  .map(
+                    (category, i) =>
+                      `<button class="tag" key="${i}">${category}</button>`
+                  )
                   .join("")}
               </div>
             </div>
@@ -163,10 +186,13 @@ export class HomeView {
       const blogs = await blogService.getBlogsByTags(category);
 
       if (!blogs || blogs.length === 0) {
-        container.innerHTML = nodatamessage(`No blogs found in category "${category}".`);
+        container.innerHTML = nodatamessage(
+          `No blogs found in category "${category}".`
+        );
       } else {
         container.innerHTML = blogs
-          .map((blog, i) => `
+          .map(
+            (blog, i) => `
             <div class="animate-item">
               ${BlogCard({
                 content: {
@@ -188,17 +214,18 @@ export class HomeView {
                 index: i,
               })}
             </div>
-          `)
+          `
+          )
           .join("");
       }
 
       this.showTab("content-category-blogs");
     } catch (error) {
-      container.innerHTML = `<p class="text-center text-red-500">Error loading blogs: ${(error as Error).message}</p>`;
+      container.innerHTML = `<p class="text-center text-red-500">Error loading blogs: ${
+        (error as Error).message
+      }</p>`;
     }
   }
-
-
 
   private showTab(tabId: string) {
     const tabContents = document.querySelectorAll(".tab-content");
@@ -213,61 +240,62 @@ export class HomeView {
     });
   }
 
-renderDetail(blog: BlogModel): string {
-  if (!blog) {
-    return `<p>Blog not found.</p>`;
-  }
+  renderDetail(blog: BlogModel): string {
+    if (!blog) {
+      return `<p>Blog not found.</p>`;
+    }
 
-  const {
-    title,
-    content,
-    banner,
-    author,
-    publishedAt
-  } = blog;
+    const { title, content, banner, author, publishedAt } = blog;
 
-  const blocks = Array.isArray(content) ? content[0]?.blocks || [] : content?.blocks || [];
+    const blocks = Array.isArray(content)
+      ? content[0]?.blocks || []
+      : content?.blocks || [];
 
-  const blocksHtml = blocks.map((block:ContentBlock) => renderContentBlock(block)).join('');
+    const blocksHtml = blocks
+      .map((block: ContentBlock) => renderContentBlock(block))
+      .join("");
 
-  const fullname = author?.personal_info?.fullname || 'Unknown Author';
-  const username = author?.personal_info?.username || '';
-  const profile_img = author?.personal_info?.profile_img || '';
+    const fullname = author?.personal_info?.fullname || "Unknown Author";
+    const username = author?.personal_info?.username || "";
+    const profile_img = author?.personal_info?.profile_img || "";
 
-  const html = `
+    const html = `
     <article class="blog-detail max-w-[900px] center !py-10 !px-5 animate-item">
 
-      <img src="${banner || ''}" alt="Banner" class="aspect-video w-full object-cover" />
+      <img src="${
+        banner || ""
+      }" alt="Banner" class="aspect-video w-full object-cover" />
 
-      <h1 class="!mt-8 text-3xl font-bold">${title || 'No title'}</h1>
+      <h1 class="!mt-8 text-3xl font-bold">${title || "No title"}</h1>
 
       <div class="flex justify-between items-center !mt-4 !mb-8">
-
         <div class="flex items-center gap-4">
           <img src="${profile_img}" alt="${fullname}" class="w-12 h-12 rounded-full object-cover" />
           <div>
             <p class="capitalize m-0">${fullname}</p>
-            <a href="#/user/${username}" class="underline text-sm">@${username}</a>
+            <a href="#/profile/${username}" class="underline text-sm">@${username}</a>
           </div>
         </div>
 
-        <time class="text-dark-grey opacity-75 text-sm">${publishedAt ? new Date(publishedAt).toLocaleDateString() : ''}</time>
+        <time class="text-dark-grey opacity-75 text-sm">
+          ${publishedAt ? new Date(publishedAt).toLocaleDateString() : ""}
+        </time>
       </div>
+
+      <div id="blog-interaction" class="mt-6"></div>
 
       <div class="blog-content font-inter font-serif">${blocksHtml}</div>
 
     </article>
   `;
 
-  return AnimationWrapper({
-    children: html,
-    fromY: 30,
-    toY: 0,
-    duration: 0.5,
-    targetClass: "animate-item",
-    stagger: 0.1,
-  });
-}
-
-
+    return AnimationWrapper({
+      children: html,
+      fromY: 30,
+      toY: 0,
+      duration: 0.5,
+      targetClass: "animate-item",
+      stagger: 0.1,
+    });
+  }
 }

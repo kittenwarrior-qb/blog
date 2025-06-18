@@ -1,6 +1,91 @@
 import Blog from "../models/Blog.js";
 import User from "../models/User.js";
 
+export const getDraftsByUsername = async (req, res) => {
+  try {
+    const { username, page = 1, limit = 5 } = req.query;
+    const skip = (page - 1) * limit;
+
+    if (!username) {
+      return res.status(400).json({ msg: "Thiếu username" });
+    }
+
+    const user = await User.findOne({ "personal_info.username": username });
+
+    if (!user) {
+      return res.status(404).json({ msg: "Không tìm thấy người dùng" });
+    }
+
+    const blogs = await Blog.find({ author: user._id, draft: true })
+      .sort({ publishedAt: -1 })
+      .skip(skip)
+      .limit(Number(limit))
+      .populate({
+        path: "author",
+        select:
+          "personal_info.fullname personal_info.username personal_info.profile_img",
+      });
+
+    const totalBlogs = await Blog.countDocuments({
+      author: user._id,
+      draft: false,
+    });
+
+    return res.status(200).json({
+      msg: "Lấy blog thành công",
+      data: blogs,
+      page: Number(page),
+      totalPages: Math.ceil(totalBlogs / limit),
+    });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ msg: "Lỗi server", error: err.message });
+  }
+};
+
+export const getByUsername = async (req, res) => {
+  try {
+    const { username, page = 1, limit = 5 } = req.query;
+    const skip = (page - 1) * limit;
+
+    if (!username) {
+      return res.status(400).json({ msg: "Thiếu username" });
+    }
+
+    // Tìm user để lấy ObjectId
+    const user = await User.findOne({ "personal_info.username": username });
+
+    if (!user) {
+      return res.status(404).json({ msg: "Không tìm thấy người dùng" });
+    }
+
+    const blogs = await Blog.find({ author: user._id, draft: false })
+      .sort({ publishedAt: -1 })
+      .skip(skip)
+      .limit(Number(limit))
+      .populate({
+        path: "author",
+        select:
+          "personal_info.fullname personal_info.username personal_info.profile_img",
+      });
+
+    const totalBlogs = await Blog.countDocuments({
+      author: user._id,
+      draft: false,
+    });
+
+    return res.status(200).json({
+      msg: "Lấy blog thành công",
+      data: blogs,
+      page: Number(page),
+      totalPages: Math.ceil(totalBlogs / limit),
+    });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ msg: "Lỗi server", error: err.message });
+  }
+};
+
 export const getBlog = async (req, res) => {
   let { blog_id, draft, mode } = req.body;
 
@@ -41,7 +126,7 @@ export const getBlog = async (req, res) => {
 export const searchBlogs = async (req, res) => {
   let { tag } = req.body;
 
-  let findQuery = { tags: tag, draft: false };
+  let findQuery = { tags: tag };
 
   try {
     const blogs = await Blog.find(findQuery)
@@ -81,25 +166,98 @@ export const trendingBlogs = async (req, res) => {
   }
 };
 
-export const latestBlog = async (req, res) => {
+export const getAllBlogs = async (req, res) => {
   try {
-    const blogs = await Blog.find({ draft: false })
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 5;
+    const skip = (page - 1) * limit;
+    const { tag, search } = req.query;
+
+    const filter = {};
+
+    if (tag) {
+      filter.tags = tag;
+    }
+
+    if (search) {
+      filter.title = { $regex: search, $options: "i" };
+    }
+
+    const blogs = await Blog.find(filter)
       .populate(
         "author",
         "personal_info.profile_img personal_info.username personal_info.fullname -_id"
       )
-      .sort({ publishedAt: -1 }) // desc
-      .select("blog_id title des banner activity tags publishedAt author -_id");
-    // .limit(5);
+      .sort({ publishedAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .select(
+        "blog_id title des banner activity tags publishedAt draft author -_id"
+      );
 
-    return res.status(200).json({ blogs });
+    const totalBlogs = await Blog.countDocuments(filter);
+    const totalPages = Math.ceil(totalBlogs / limit);
+
+    const total_view = blogs.reduce((acc, blog) => {
+      return acc + (blog.activity.total_reads || 0);
+    }, 0);
+
+    return res.status(200).json({
+      blogs,
+      pagination: {
+        totalBlogs,
+        totalPages,
+        currentPage: page,
+        limit,
+      },
+      total_view,
+    });
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
+};
+
+export const latestBlog = async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 5;
+    const skip = (page - 1) * limit;
+    const { tag } = req.query;
+
+    const filter = { draft: false };
+    if (tag) {
+      filter.tags = tag;
+    }
+
+    const blogs = await Blog.find(filter)
+      .populate(
+        "author",
+        "personal_info.profile_img personal_info.username personal_info.fullname -_id"
+      )
+      .sort({ publishedAt: -1 }) // newest first
+      .skip(skip)
+      .limit(limit)
+      .select("blog_id title des banner activity tags publishedAt author -_id");
+
+    const totalBlogs = await Blog.countDocuments(filter);
+    const totalPages = Math.ceil(totalBlogs / limit);
+
+    return res.status(200).json({
+      blogs,
+      pagination: {
+        totalBlogs,
+        totalPages,
+        currentPage: page,
+        limit,
+      },
+    });
   } catch (err) {
     return res.status(500).json({ error: err.message });
   }
 };
 
 export const createBlog = async (req, res) => {
-  const authorId = req.user;
+  const authorId = req.user.id;
   if (!authorId) {
     return res.status(401).json({ error: "Unauthorized: Missing author info" });
   }
@@ -223,42 +381,41 @@ export const userWrittenBlogsCount = async (req, res) => {
 };
 
 export const deleteBlog = async (req, res) => {
-  // let user_id = req.user;
-  let { blog_id } = req.body;
+  const { blog_id } = req.params;
 
-  Blog.findOneAndDelete({ blog_id })
-    .then((blog) => {
-      // Notification.deleteMany({ blog: blog._id }).then((data) =>
-      //   console.log("notifications deleted")
-      // );
+  try {
+    const blog = await Blog.findOneAndDelete({ blog_id });
 
-      // Comment.deleteMany({ blog_id: blog._id }).then((data) =>
-      //   console.log("comments deleted")
-      // );
+    if (!blog) {
+      return res.status(404).json({ msg: "Blog not found" });
+    }
 
-      // User.findOneAndUpdate(
-      //   { _id: user_id },
-      //   { $pull: { blogs: blog._id }, $inc: { "account_info.total_posts": -1 } }
-      // ).then((user) => console.log("Blog deleted"));
+    await User.updateOne(
+      { _id: blog.author },
+      {
+        $pull: { blogs: blog._id },
+        $inc: {
+          "account_info.total_posts": -1,
+          "account_info.total_reads": -blog.activity.total_reads,
+        },
+      }
+    );
 
-      return res.status(200).json({ status: "done" });
-    })
-    .catch((err) => {
-      return res.status(500).json({ error: err.message });
-    });
+    return res.status(200).json({ status: "done" });
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
 };
-
-// controllers/blogController.js
 
 export const updateBlog = async (req, res) => {
   const user_id = req.user;
-  const { blog_id, title } = req.body;
+  const blog_id = req.params.id;
+  const { title, banner, des, tags, draft, content } = req.body;
 
   if (!title || !title.length) {
     return res.status(400).json({ error: "Title cannot be empty" });
   }
 
-  // tạo lại blog_id nếu muốn
   const new_blog_id = title
     .trim()
     .toLowerCase()
@@ -276,20 +433,49 @@ export const updateBlog = async (req, res) => {
     }
 
     // if (blog.author.toString() !== user_id) {
-    //   return res
-    //     .status(403)
-    //     .json({ error: "You are not the author of this blog" });
+    //   return res.status(403).json({ error: "Not authorized" });
     // }
 
     blog.title = title;
+    blog.banner = banner;
+    blog.des = des;
+    blog.tags = tags;
+    blog.draft = draft;
+    blog.content = content;
     blog.blog_id = new_blog_id;
 
     await blog.save();
 
-    return res
-      .status(200)
-      .json({ message: "Blog updated", blog_id: new_blog_id });
+    return res.status(200).json({
+      message: "Blog updated",
+      blog_id: new_blog_id,
+    });
   } catch (err) {
+    console.log(err);
+
     return res.status(500).json({ error: err.message });
+  }
+};
+
+export const likeBlog = async (req, res) => {
+  try {
+    const user_id = req.user;
+    const { _id, islikedByUser } = req.body;
+
+    const incrementVal = !islikedByUser ? 1 : -1;
+
+    const blog = await Blog.findOneAndUpdate(
+      { _id },
+      { $inc: { "activity.total_likes": incrementVal } },
+      { new: true }
+    );
+
+    if (!blog) {
+      return res.status(404).json({ error: "Blog not found" });
+    }
+
+    return res.status(200).json({ liked_by_user: !islikedByUser });
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
   }
 };

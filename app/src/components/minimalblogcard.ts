@@ -20,7 +20,7 @@ export const MinimalBlogCard = (blog: {
   const delay = index * 0.1;
 
   const formHtml = `
-    <a href="#/blog/${blog_id}" class="flex gap-5 mb-4 items-start">
+    <a href="#/blog/${blog_id}" class="flex gap-5 mb-4 items-center">
       <h1 class="blog-index">${index < 9 ? "0" + (index + 1) : index + 1}</h1>
 
       <div>

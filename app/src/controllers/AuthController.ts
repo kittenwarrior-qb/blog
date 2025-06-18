@@ -20,13 +20,16 @@ export class AuthController {
     AppContext.setUsername(authModel.username);
   }
 
-  private validateForm(type: 'login' | 'register', data: Record<string, string>): string | null {
+  private validateForm(
+    type: "login" | "register",
+    data: Record<string, string>
+  ): string | null {
     const { fullname, email, password } = data;
 
     if (!email) return "Enter your email";
     if (!password) return "Enter your password";
 
-    if (type === 'register' && (!fullname || fullname.length < 3)) {
+    if (type === "register" && (!fullname || fullname.length < 3)) {
       return "Fullname must be at least 3 characters";
     }
 
@@ -41,18 +44,30 @@ export class AuthController {
     return null;
   }
 
-  private async handleAuth(type: 'login' | 'register', formData: Record<string, string>) {
+  private async handleAuth(
+    type: "login" | "register",
+    formData: Record<string, string>
+  ) {
     try {
-      const response = type === 'login'
-        ? await this.authService.login(formData)
-        : await this.authService.register(formData);
+      const response =
+        type === "login"
+          ? await this.authService.login(formData)
+          : await this.authService.register(formData);
 
-      const authModel = new AuthModel(response);
+      const { msg, data } = response;
+
+      const authModel = new AuthModel(data);
       this.updateUserContext(authModel);
-      toast.success(`${type === 'login' ? 'Login' : 'Registration'} successful!`);
-      window.location.hash = "#/";
+
+      toast.success(msg);
+
+      if (type === "login" && data.role === "admin") {
+        window.location.hash = "#/admin/dashboard";
+      } else {
+        window.location.hash = type === "login" ? "#/" : "#/login";
+      }
     } catch (err: any) {
-      toast.error(err.response?.data?.message || `${type === 'login' ? 'Login' : 'Registration'} failed`);
+      toast.error(err.response?.data?.msg || "Có lỗi xảy ra");
     }
   }
 
@@ -63,42 +78,45 @@ export class AuthController {
     }
 
     try {
-      toast.loading("Sending reset password email...");  
+      toast.loading("Sending reset password email...");
       await this.authService.forgotPassword({ email });
 
-      toast.dismissLoading();  
+      toast.dismissLoading();
       toast.success("Reset password link sent. Check your email.");
     } catch (err: any) {
-      toast.dismissLoading(); 
+      toast.dismissLoading();
       toast.error(err.response?.data?.message || "Failed to send reset email");
     }
   }
 
-
   public initTogglePassword() {
-    document.querySelectorAll('.toggle-password').forEach((icon) => {
-      icon.addEventListener('click', () => {
+    document.querySelectorAll(".toggle-password").forEach((icon) => {
+      icon.addEventListener("click", () => {
         const targetId = (icon as HTMLElement).dataset.target;
         const input = document.getElementById(targetId!) as HTMLInputElement;
 
         if (input) {
-          const isPassword = input.type === 'password';
-          input.type = isPassword ? 'text' : 'password';
+          const isPassword = input.type === "password";
+          input.type = isPassword ? "text" : "password";
 
-          icon.classList.toggle('fa-eye');
-          icon.classList.toggle('fa-eye-slash');
+          icon.classList.toggle("fa-eye");
+          icon.classList.toggle("fa-eye-slash");
         }
       });
     });
   }
 
   public initForgotPasswordFormEvents() {
-    const form = document.getElementById('forgotForm') as HTMLFormElement | null;
+    const form = document.getElementById(
+      "forgotForm"
+    ) as HTMLFormElement | null;
     if (!form) return;
 
-    form.addEventListener('submit', async e => {
+    form.addEventListener("submit", async (e) => {
       e.preventDefault();
-      const email = (form.querySelector('#email') as HTMLInputElement).value.trim();
+      const email = (
+        form.querySelector("#email") as HTMLInputElement
+      ).value.trim();
       if (!email) return toast.error("Enter your email");
 
       await this.handleForgotPassword(email);
@@ -106,13 +124,17 @@ export class AuthController {
   }
 
   public initResetPasswordFormEvents(token: string) {
-    const form = document.getElementById('resetForm') as HTMLFormElement | null;
+    const form = document.getElementById("resetForm") as HTMLFormElement | null;
     if (!form) return;
 
-    form.addEventListener('submit', async e => {
+    form.addEventListener("submit", async (e) => {
       e.preventDefault();
-      const newPassword = (form.querySelector('#new-password') as HTMLInputElement).value.trim();
-      const confirmPassword = (form.querySelector('#confirm-password') as HTMLInputElement).value.trim();
+      const newPassword = (
+        form.querySelector("#new-password") as HTMLInputElement
+      ).value.trim();
+      const confirmPassword = (
+        form.querySelector("#confirm-password") as HTMLInputElement
+      ).value.trim();
 
       if (!newPassword || !confirmPassword) {
         return toast.error("Please fill in all password fields");
@@ -124,28 +146,30 @@ export class AuthController {
       try {
         await this.authService.resetPassword({ token, newPassword });
         toast.success("Password has been reset successfully!");
-        window.location.hash = '#/login';
+        window.location.hash = "#/login";
       } catch (err: any) {
         toast.error(err.response?.data?.message || "Failed to reset password");
       }
     });
-
   }
 
-
-  public initAuthFormEvents(type: 'login' | 'register') {
-    const form = document.getElementById('authForm') as HTMLFormElement | null;
-    const googleBtn = document.querySelector('#googleAuth') as HTMLButtonElement | null;
-    const forgotLink = document.querySelector('#forgotPasswordLink') as HTMLElement | null;
+  public initAuthFormEvents(type: "login" | "register") {
+    const form = document.getElementById("authForm") as HTMLFormElement | null;
+    const googleBtn = document.querySelector(
+      "#googleAuth"
+    ) as HTMLButtonElement | null;
+    const forgotLink = document.querySelector(
+      "#forgotPasswordLink"
+    ) as HTMLElement | null;
 
     if (!form) return;
 
-    form.addEventListener('submit', async (e) => {
+    form.addEventListener("submit", async (e) => {
       e.preventDefault();
 
       const data: Record<string, string> = {};
       for (const [key, value] of new FormData(form).entries()) {
-        data[key] = typeof value === 'string' ? value : '';
+        data[key] = typeof value === "string" ? value : "";
       }
 
       const error = this.validateForm(type, data);
@@ -162,25 +186,41 @@ export class AuthController {
     if (googleBtn) {
       googleBtn.addEventListener("click", async (e) => {
         e.preventDefault();
+
         try {
           const result = await authWithGoogle();
-          if (!result?.user) throw new Error("Google login failed");
 
-          const idToken = await result.user.getIdToken();
-          const response = await this.authService.loginWithGoogle(idToken);
-          const authModel = new AuthModel(response);
+          if (!result?.user || !result.idToken) {
+            throw new Error("Không thể xác thực với Google");
+          }
 
+          // Gửi ID token đến server để xử lý đăng nhập hoặc đăng ký
+          const response = await this.authService.loginWithGoogle(
+            result.idToken
+          );
+          const { msg, data } = response;
+
+          if (!data?.accessToken) {
+            throw new Error("Không nhận được accessToken");
+          }
+
+          const authModel = new AuthModel(data);
           this.updateUserContext(authModel);
-          toast.success("Google login successful!");
+
+          toast.success(msg || "Đăng nhập bằng Google thành công");
           window.location.hash = "#/";
         } catch (err: any) {
           console.error("[Google Login Error]:", err);
-          toast.error("Google authentication failed");
+          toast.error(
+            err?.response?.data?.msg ||
+              err.message ||
+              "Đăng nhập Google thất bại"
+          );
         }
       });
     }
 
-    if (forgotLink && type === 'login') {
+    if (forgotLink && type === "login") {
       forgotLink.addEventListener("click", async (e) => {
         e.preventDefault();
         const emailInput = document.querySelector("#email") as HTMLInputElement;
@@ -202,11 +242,10 @@ export class AuthController {
   }
 
   public ForgotPasswordPage(): string {
-    return this.view.renderForgotPassword(); 
+    return this.view.renderForgotPassword();
   }
 
   public ResetPasswordPage(token: string): string {
     return this.view.renderResetPassword(token);
   }
-
 }
